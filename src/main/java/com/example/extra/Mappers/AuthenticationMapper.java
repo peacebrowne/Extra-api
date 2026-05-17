@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface AuthenticationMapper {
 
-    @Select("SELECT email, password FROM users WHERE email = #{email}")
+    @Select("SELECT email, password, role FROM users WHERE email = #{email}")
     LoginRequest findLoginDetails(@Param("email") String email);
 
 }

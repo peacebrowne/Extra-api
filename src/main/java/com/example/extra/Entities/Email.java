@@ -11,7 +11,7 @@ public class Email {
 
     public Email(String recipient, String verificationCode) {
         this.recipient = recipient;
-        this.subject = "Verify Your Account";
+        this.subject = "Verification Code";
         this.message = """
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px;">
         <h2 style="color: #333;">Welcome to Extra!</h2>

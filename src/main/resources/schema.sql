@@ -3,9 +3,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    firstName TEXT,
+    lastName TEXT,
     email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    role TEXT CHECK ( role IN ('poster', 'worker') ),
+    msisdn TEXT,
+    role TEXT CHECK ( role IN ('POSTER', 'WORKER') ),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -16,7 +19,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     title TEXT NOT NULL,
     description TEXT,
     budget DECIMAL,
-    status TEXT DEFAULT 'open' CHECK ( status IN ('open', 'assigned', 'in_progress', 'completed', 'cancelled') ),
+    status TEXT DEFAULT 'OPEN' CHECK ( status IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED') ),
     posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (worker_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (poster_id) REFERENCES users(id) ON DELETE CASCADE

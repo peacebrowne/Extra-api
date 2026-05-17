@@ -11,6 +11,7 @@ import com.example.extra.Exceptions.Custom.NotFound;
 import com.example.extra.Mappers.AuthenticationMapper;
 import com.example.extra.Mappers.UserMapper;
 import com.example.extra.Services.JwtService;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -28,6 +29,7 @@ import java.util.Optional;
 
 @Transactional
 @Service
+@Slf4j
 public class AuthenticationServiceImpl implements UserDetailsService {
 
 
@@ -53,9 +55,9 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
 
     @Override
-    public UserDetails loadUserByUsername(@NonNull String username) {
+    public UserDetails loadUserByUsername(@NonNull String email) {
         try{
-            Optional<LoginRequest> userDetail = Optional.ofNullable(authenticationMapper.findLoginDetails(username));
+            Optional<LoginRequest> userDetail = Optional.ofNullable(authenticationMapper.findLoginDetails(email));
 
             if (userDetail.isEmpty()){
                 throw new NotFound("Invalid username or password");
@@ -63,8 +65,10 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
             return new UserPrincipal(userDetail.get());
         }  catch (NotFound e) {
+            log.error("Error: {}", e.getMessage(), e);
             throw e;
         } catch (Exception e) {
+            log.error("Internal Server Error: {}", e.getMessage(), e);
             throw new InternalServerError(
                     "An unexpected error occurred while fetching the user.");
         }
@@ -85,16 +89,16 @@ public class AuthenticationServiceImpl implements UserDetailsService {
             User user = userMapper.findByEmail(login.getEmail());
 
             if (user != null) {
-                return jwtService.generateToken(login.getEmail());
+                return jwtService.generateToken(user);
             }
         }
-
 
         return "Fail";
     }
 
     public UserDTO register(User user){
         try {
+            log.info("Registering User: {}", user.getEmail());
             User existingUser = userMapper.findByEmail(user.getEmail());
 
             if (existingUser != null) {
@@ -112,16 +116,20 @@ public class AuthenticationServiceImpl implements UserDetailsService {
             return userMapper.registerUser(user);
 
         }catch (Conflict | BadRequest e){
+            log.error("Error: {}", e.getMessage(), e);
             throw e;
         }catch (Exception e){
-            System.out.println("\n\n" + e.toString() + "\n\n");
+            log.error("Internal Server Error: {}", e.getMessage(), e);
             throw new InternalServerError("An unexpected error occurred while trying to create the user");
         }
     }
 
-    public boolean verifyUserCode(String email, String verificationCode) {
+    private boolean verifyUserCode(String email, String verificationCode) {
         // Retrieve the code from Redis using the email as the key
-        String savedCode = redisTemplate.opsForValue().get(email);
+        String key = "verification_code_" + email;
+        String savedCode = redisTemplate.opsForValue().get(key);
+
+        log.info("\n\n Verifying user code: {}, {} \n\n", savedCode, verificationCode);
 
         return verificationCode.equals(savedCode);
     }

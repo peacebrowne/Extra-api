@@ -1,5 +1,6 @@
 package com.example.extra.Configuration;
 
+import com.example.extra.Enumerators.Role;
 import com.example.extra.Filters.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -44,14 +45,16 @@ public class SecurityConfiguration {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(request ->
-                        request.requestMatchers("/api/register", "/api/login", "/api/mail/verification-code")
+                        request.requestMatchers(
+                                "/api/register",
+                                        "/api/login",
+                                        "/api/mail/verification-code",
+                                        "/api/sms/verification-code")
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())
-                .oauth2Login(Customizer.withDefaults())
-
                 .sessionManagement(
                         session -> session
                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)

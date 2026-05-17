@@ -6,11 +6,12 @@ import com.example.extra.Entities.User;
 import com.example.extra.Services.Impl.AuthenticationServiceImpl;
 import com.example.extra.Success.Success;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
+@Slf4j
 @RestController
 @RequestMapping("/api")
 public class AuthenticationController {

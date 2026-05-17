@@ -1,5 +1,6 @@
 package com.example.extra.Entities;
 
+import com.example.extra.Enumerators.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
@@ -14,6 +15,8 @@ public class User {
      */
     private String id;
 
+    private String firstName;
+    private String lastName;
 
     /*
      * Email address of the user who posted the user.
@@ -35,8 +38,8 @@ public class User {
      */
     @NotEmpty(message = "Please provide a user role")
     @Pattern(
-            regexp = "^(?i)(poster|worker)$",
-            message = "Role must be 'poster' or 'worker'"
+            regexp = "^(?i)(POSTER|WORKER)$",
+            message = "Role must be 'POSTER' or 'WORKER'"
     )
     private String role;
 
