@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class SmsServiceImpl implements SmsService {
 
     @Autowired
-    private StringRedisTemplate redisTemplate;
+    StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     SmsNotificationProperties smsNotificationProperties;
@@ -43,7 +43,7 @@ public class SmsServiceImpl implements SmsService {
            String code = Utils.generateVerificationCode();
 
            // Store in Redis: Key = msisdn, Value = code, Timeout = 5 seconds
-           redisTemplate.opsForValue().set(key, code, 5, TimeUnit.MINUTES);
+           stringRedisTemplate.opsForValue().set(key, code, 5, TimeUnit.MINUTES);
 
            Sms sms = new Sms(msisdn, code);
 
@@ -53,12 +53,11 @@ public class SmsServiceImpl implements SmsService {
                    .setTemplateCode(smsNotificationProperties.getTestTemplateCode())
                    .setTemplateParam(sms.getMessage());
 
-           Object response = client.sendMessageWithTemplateWithOptions(request, new RuntimeOptions());
-           log.info(response.toString());
+           client.sendMessageWithTemplateWithOptions(request, new RuntimeOptions());
 
        }
        catch (Exception e){
-           redisTemplate.delete("verification_code_" + msisdn);
+           stringRedisTemplate.delete("verification_code_" + msisdn);
            log.error("Internal Server Error: {}", e.getMessage(), e);
            throw new InternalServerError("Unexpected error occurred while sending sms");
        }

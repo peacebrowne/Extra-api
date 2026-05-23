@@ -1,5 +1,8 @@
 package com.example.extra.Utils;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public final class Utils {
     public static String generateVerificationCode() {
         StringBuilder number = new StringBuilder();
@@ -10,4 +13,5 @@ public final class Utils {
 
         return number.toString();
     }
+
 }

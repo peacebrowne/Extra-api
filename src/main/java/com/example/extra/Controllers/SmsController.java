@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SmsController {
 
     @Autowired
-    SmsServiceImpl SMSServiceImpl;
+    SmsServiceImpl SmsServiceImpl;
 
     @PostMapping("/verification-code")
     public ResponseEntity<?> verificationCode(@RequestParam String msisdn) {
-        SMSServiceImpl.sendVerificationCode(msisdn);
+        SmsServiceImpl.sendVerificationCode(msisdn);
         return Success.OK("Successfully Sent SMS Verification Code.",  true);
     }
 

@@ -1,11 +1,11 @@
 package com.example.extra.Entities;
 
-import com.example.extra.Enumerators.Role;
+import com.example.extra.Enumerator.Roles;
+import jakarta.validation.constraints.*;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class User {
@@ -23,7 +23,6 @@ public class User {
      * This field is required and must be a valid email address.
      */
     @NotEmpty(message = "Please provide an email address")
-    @Email(message = "Invalid email address")
     @Email(message = "Please provide a valid email address")
     @Pattern(
             regexp = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$",
@@ -33,15 +32,11 @@ public class User {
 
 
     /*
-     * Role of the user and should be either POSTER or WORKER.
+     * Role of the user and should be either CLIENT or PROVIDER.
      * This field is required and should not exceed 20 characters.
      */
-    @NotEmpty(message = "Please provide a user role")
-    @Pattern(
-            regexp = "^(?i)(POSTER|WORKER)$",
-            message = "Role must be 'POSTER' or 'WORKER'"
-    )
-    private String role;
+    @NotNull(message = "Please provide a user role")
+    private Roles role;
 
 
     /*
@@ -58,14 +53,19 @@ public class User {
     private String password;
 
 
-    /*
-     * Password for the user account.
-     * Must contain at least one uppercase letter, one lowercase letter,
-     * one number, and one special character.
+     /*
+     * One-time verification code sent to the user (e.g. email or SMS) used to verify
+     * account ownership or complete sensitive actions. Expected format: exactly 6 digits.
      */
     @NotEmpty(message = "Verification is required")
     @Size(min = 6, max = 6, message = "Verification code should be 6 digits")
+    @Pattern(regexp = "\\d{6}", message = "Verification code must be numeric (6 digits)")
     private String verificationCode;
+
+    /**
+     * Creation timestamp for the job.
+     */
+    private LocalDateTime created;
 
 
 }

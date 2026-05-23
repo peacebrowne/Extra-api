@@ -86,7 +86,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
         if (authentication.isAuthenticated()) {
 
-            User user = userMapper.findByEmail(login.getEmail());
+            User user = userMapper.getUserByEmail(login.getEmail());
 
             if (user != null) {
                 return jwtService.generateToken(user);
@@ -98,8 +98,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
     public UserDTO register(User user){
         try {
-            log.info("Registering User: {}", user.getEmail());
-            User existingUser = userMapper.findByEmail(user.getEmail());
+            User existingUser = userMapper.getUserByEmail(user.getEmail());
 
             if (existingUser != null) {
                 throw new Conflict("User with this email: '" + user.getEmail() + "' already exists.");
@@ -128,8 +127,6 @@ public class AuthenticationServiceImpl implements UserDetailsService {
         // Retrieve the code from Redis using the email as the key
         String key = "verification_code_" + email;
         String savedCode = redisTemplate.opsForValue().get(key);
-
-        log.info("\n\n Verifying user code: {}, {} \n\n", savedCode, verificationCode);
 
         return verificationCode.equals(savedCode);
     }

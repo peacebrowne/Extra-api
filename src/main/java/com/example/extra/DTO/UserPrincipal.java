@@ -1,14 +1,13 @@
 package com.example.extra.DTO;
 
-import com.example.extra.Enumerators.Role;
-import com.example.extra.Mappers.AuthenticationMapper;
+import com.example.extra.Enumerator.Roles;
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,16 +15,16 @@ import java.util.Set;
 public class UserPrincipal implements UserDetails {
 
     private final LoginRequest user;
+    private Roles role;
 
     public UserPrincipal(LoginRequest user) {
         this.user = user;
+        this.role = user.getRole();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Set<GrantedAuthority> authorities = new HashSet<>();
-        authorities.add(new SimpleGrantedAuthority(user.getRole()));
-        return authorities;
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + this.role.name()));
     }
 
     @Override

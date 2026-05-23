@@ -23,7 +23,7 @@ public class EmailServiceImpl implements EmailService {
     JavaMailSender mailSender;
 
     @Autowired
-    private StringRedisTemplate redisTemplate;
+    StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     EmailNotificationProperties emailNotificationProperties;
@@ -39,6 +39,7 @@ public class EmailServiceImpl implements EmailService {
      * Delete the email verification code stored in redis
      */
     @Override
+
     public void sendVerificationCode(String email) {
         String sender = emailNotificationProperties.getUsername();
 
@@ -48,7 +49,7 @@ public class EmailServiceImpl implements EmailService {
             String code = Utils.generateVerificationCode();
 
             // Store in Redis: Key = email, Value = code, Timeout = 5 minutes
-            redisTemplate.opsForValue().set(key, code, 5, TimeUnit.MINUTES);
+            stringRedisTemplate.opsForValue().set(key, code, 15, TimeUnit.MINUTES);
 
             Email customEmail = new Email(email, code);
 
@@ -63,7 +64,7 @@ public class EmailServiceImpl implements EmailService {
             mailSender.send(message);
 
         }catch (Exception e){
-            redisTemplate.delete(email);
+            stringRedisTemplate.delete("verification_code_" + email);
 
             log.error("Internal Server Error: {}", e.getMessage(), e);
             throw new InternalServerError("Unexpected error occurred while sending email");
