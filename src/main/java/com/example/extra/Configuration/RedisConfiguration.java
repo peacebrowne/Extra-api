@@ -1,5 +1,6 @@
 package com.example.extra.Configuration;
 
+import com.example.extra.Entities.Task;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -26,7 +27,7 @@ public class RedisConfiguration {
                 .serializeValuesWith(
                         RedisSerializationContext.SerializationPair
                                 .fromSerializer(
-                                        new JacksonJsonRedisSerializer<Object>(Object.class)
+                                        new JacksonJsonRedisSerializer<Task>(Task.class)
                                 )
                 );
     }
