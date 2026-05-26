@@ -72,6 +72,9 @@ public class TaskServiceImpl implements TaskService {
     @CachePut(value = "task", key = "#existingTask.id")
     public Task updateTask(Task task) {
         try {
+
+            checkAndReturnUser(task.getClientId());
+
             // Retrieve and verify the task exists
             final Task existingTask = getTaskById(task.getId());
 
@@ -84,7 +87,11 @@ public class TaskServiceImpl implements TaskService {
 
             return existingTask;
 
-        } catch (Exception e) {
+        }catch (NotFound ex){
+            log.error(ex.getMessage());
+            throw ex;
+        }
+        catch (Exception e) {
             log.error("Unexpected error occurred while updating task: {}", e.getMessage());
             throw new InternalServerError("Unexpected error occurred while updating task");
         }

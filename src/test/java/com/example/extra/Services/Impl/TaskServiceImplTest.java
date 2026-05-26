@@ -58,7 +58,7 @@ class TaskServiceImplTest {
         @Test
         @DisplayName("Should create task successfully when valid data exist")
         void shouldCreateTaskSuccessfully(){
-            final String userId = user.getId();
+            final String userId = task.getClientId();
 
             when(userMapper.getUserByIdentifier(userId)).thenReturn(user);
             when(taskMapper.createTask(task)).thenReturn(task);
@@ -77,7 +77,7 @@ class TaskServiceImplTest {
         @DisplayName("Should throw NotFound exception when user does not exist")
         void shouldThrowNotFoundExceptionWhenUserDoesNotExist(){
 
-            final String userId = user.getId();
+            final String userId = task.getClientId();
 
             when(userMapper.getUserByIdentifier(userId)).thenReturn(null);
             final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.createTask(task));
@@ -89,6 +89,47 @@ class TaskServiceImplTest {
         }
 
 
+    }
+
+    @Nested
+    @DisplayName("Update Task Test")
+    class UpdateTaskTest{
+
+        @Test
+        @DisplayName("Should update task successfully when valid data exist")
+        void shouldUpdateTaskSuccessfully(){
+            final String userId = task.getClientId();
+
+            task.setTitle("Updated Test Task Title");
+            task.setDescription("Updated Test Task Description");
+
+            when(userMapper.getUserByIdentifier(userId)).thenReturn(user);
+            when(taskMapper.getTaskById(task.getId())).thenReturn(task);
+
+            final Task updatedTask = taskServiceImpl.updateTask(task);
+
+            assertNotNull(updatedTask);
+            assertEquals(task.getTitle(), updatedTask.getTitle());
+            assertEquals(task.getDescription(), updatedTask.getDescription());
+            verify(userMapper, times(1)).getUserByIdentifier(userId);
+            verify(taskMapper, times(1)).updateTask(argThat(t -> t.getId().equals(updatedTask.getId())));
+
+        }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when user does not exist")
+        void shouldThrowNotFoundExceptionWhenUserDoesNotExist(){
+
+            final String userId = user.getId();
+
+            when(userMapper.getUserByIdentifier(userId)).thenReturn(null);
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.updateTask(task));
+
+            assertEquals("User with this identifier " + userId + " not found", exception.getMessage());
+
+            verify(userMapper, times(1)).getUserByIdentifier(userId);
+            verifyNoInteractions(taskMapper);
+        }
     }
 
 }
