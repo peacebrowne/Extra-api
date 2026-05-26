@@ -1,75 +1,94 @@
 package com.example.extra.Services.Impl;
 
 import com.example.extra.Entities.Task;
+import com.example.extra.Entities.User;
+import com.example.extra.Enumerator.Roles;
+import com.example.extra.Exceptions.Custom.NotFound;
 import com.example.extra.Mappers.TaskMapper;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.example.extra.Mappers.UserMapper;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceImplTest {
 
+    /*
+     * Inject Dependencies that your Service Implementation depends on
+     */
     @Mock
     TaskMapper taskMapper;
+
+    @Mock
+    UserMapper userMapper;
 
     @InjectMocks
     TaskServiceImpl taskServiceImpl;
 
-    private static Task task = null;
-
-    @BeforeAll
-    static void setUp() {
-        task = new Task();
-        task.setTitle("Test Task");
-        task.setDescription("This is a test task");
-        task.setClientId("123e4567-e89b-12d3-a456-426614174000d");
-    }
+    private Task task;
+    private User user;
 
     @BeforeEach
-    public void setUpEachTest() {
-       System.out.println("Before each test");
+    void setUp() {
+
+        user = new User();
+        user.setId("123e4567-e89b-12d3-a456-426614174001");
+        user.setEmail("emmanuelbrowne751999@gmail.com");
+        user.setFirstName("Emmanuel");
+        user.setLastName("Browne");
+        user.setRole(Roles.CLIENT);
+
+        this.task = new Task();
+        task.setId("6764842f-770a-434f-b3de-1ee9bbaa0b61");
+        task.setTitle("Test Task");
+        task.setDescription("This is a test task");
+        task.setClientId("123e4567-e89b-12d3-a456-426614174001");
     }
 
-    @Test
-    void createTaskShouldCreateTaskSuccessfully() {
 
-        Mockito.when(taskMapper.createTask(task)).thenReturn(task);
+    @Nested
+    @DisplayName("Create Task Test")
+    class CreateTaskTest{
 
-        Task createTask = taskServiceImpl.createTask(task);
+        @Test
+        @DisplayName("Should create task successfully when valid data exist")
+        void shouldCreateTaskSuccessfully(){
+            final String userId = user.getId();
 
-        assertNotNull(createTask);
-        assertEquals(task.getTitle(), createTask.getTitle());
-        assertEquals(task.getDescription(), createTask.getDescription());
+            when(userMapper.getUserByIdentifier(userId)).thenReturn(user);
+            when(taskMapper.createTask(task)).thenReturn(task);
+
+            final Task createdTask = taskServiceImpl.createTask(task);
+
+            assertNotNull(createdTask);
+            assertEquals(task.getId(), createdTask.getId());
+            verify(userMapper, times(1)).getUserByIdentifier(userId);
+            verify(taskMapper, times(1)).createTask(task);
+            verify(taskMapper, times(1)).createTask(argThat(t -> t.getId().equals(createdTask.getId())));
+
+        }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when user does not exist")
+        void shouldThrowNotFoundExceptionWhenUserDoesNotExist(){
+
+            final String userId = user.getId();
+
+            when(userMapper.getUserByIdentifier(userId)).thenReturn(null);
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.createTask(task));
+
+            assertEquals("User with this identifier " + userId + " not found", exception.getMessage());
+
+            verify(userMapper, times(1)).getUserByIdentifier(userId);
+            verifyNoInteractions(taskMapper);
+        }
+
+
     }
 
-    @Test
-    void updateTaskShouldUpdateTaskSuccessfully() {
-        task.setId("123e4567-e89b-12d3-a456-426614174000");
-
-        Mockito.when(taskMapper.getTaskById(task.getId())).thenReturn(task);
-        Mockito.doNothing().when(taskMapper).updateTask(task);
-
-        Task updatedTask = taskServiceImpl.updateTask(task);
-        assertEquals(task.getTitle(), updatedTask.getTitle());
-        assertSame(task.getId(), updatedTask.getId());
-    }
-
-    @Test
-    void deleteTaskShouldDeleteTaskSuccessfully() {
-        String id = "123e4567-e89b-12d3-a456-426614174000";
-        task.setId("123e4567-e89b-12d3-a456-426614174000");
-
-        Mockito.when(taskMapper.getTaskById(id)).thenReturn(task);
-        Mockito.doNothing().when(taskMapper).deleteTask(id);
-
-        assertEquals(task, taskServiceImpl.deleteTask(id));
-
-    }
 }

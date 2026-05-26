@@ -10,8 +10,9 @@ import com.example.extra.Exceptions.Custom.NotFound;
 import com.example.extra.Mappers.TaskMapper;
 import com.example.extra.Mappers.UserMapper;
 import com.example.extra.Services.TaskService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.jspecify.annotations.NonNull;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -21,23 +22,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-@Transactional
-@Service
 @Slf4j
+@Service
+@Transactional
+@RequiredArgsConstructor
 public class TaskServiceImpl implements TaskService {
 
-    @Autowired
-    TaskMapper taskMapper;
-
-    @Autowired
-    UserMapper userMapper;
-
+    private final TaskMapper taskMapper;
+    private final UserMapper userMapper;
 
     /**
      * Creates a new task and persists it to the database.
      *
      * @param task the Task object to create (should include title, description, clientId, etc.)
      * @return the created Task object with an assigned id
+     * @throws NotFound if no task with the given id exists
      * @throws InternalServerError if an unexpected error occurs during task creation
      */
     @Override
@@ -45,11 +44,7 @@ public class TaskServiceImpl implements TaskService {
     public Task createTask(Task task) {
         try {
 
-            UserDTO user = userMapper.getUserById(task.getClientId());
-
-            if (user == null) {
-                throw new NotFound("User with id " + task.getClientId() + " not found");
-            }
+            checkAndReturnUser(task.getClientId());
 
             // Create and persist the task to the database
             return taskMapper.createTask(task);
@@ -78,7 +73,7 @@ public class TaskServiceImpl implements TaskService {
     public Task updateTask(Task task) {
         try {
             // Retrieve and verify the task exists
-            Task existingTask = getTaskById(task.getId());
+            final Task existingTask = getTaskById(task.getId());
 
             // Update title and description only if provided (non-null)
             Optional.ofNullable(task.getTitle()).ifPresent(existingTask::setTitle);
@@ -111,7 +106,7 @@ public class TaskServiceImpl implements TaskService {
     public Task deleteTask(String id) {
         try {
             // Verify the task exists before attempting deletion
-            Task existingTask = getTaskById(id);
+            final Task existingTask = getTaskById(id);
             taskMapper.deleteTask(id);
             return existingTask;
         }catch (BadRequest | NotFound e) {
@@ -138,9 +133,7 @@ public class TaskServiceImpl implements TaskService {
     public Task getTaskById(String id) {
         try {
 
-            log.info("Getting task with id {}", id);
-
-            Task task = taskMapper.getTaskById(id);
+            final Task task = taskMapper.getTaskById(id);
             if (task == null) {
                 log.warn("Task with id {} not found", id);
                 throw new NotFound("Task with id " + id + " not found");
@@ -190,22 +183,14 @@ public class TaskServiceImpl implements TaskService {
     public Task acceptTask(String id, String email) {
         try {
 
-            Task existingTask = getTaskById(id);
+            final Task existingTask = getTaskById(id);
 
-            User user = userMapper.getUserByEmail(email);
-            if (user == null) {
-                throw new NotFound("User with email " + email + " not found");
-            }
+            final User user = checkAndReturnUser(email);
+            final String providerId = getProviderId(user, existingTask);
 
-            String providerId = getProviderId(user, existingTask);
+            taskMapper.updateStatusToAccepted(id, providerId);
 
-            Task updatedTask = taskMapper.updateStatusToAccepted(id, providerId);
-
-            if (updatedTask == null) {
-                throw new BadRequest("Task was already accepted by another provider");
-            }
-
-            return updatedTask;
+            return getTaskById(id);
 
         } catch (NotFound | BadRequest e) {
             log.error("Accepting Task Validation Error: {}", e.getMessage(), e);
@@ -235,32 +220,15 @@ public class TaskServiceImpl implements TaskService {
 
         try {
             // Retrieve and verify the task exists
-            Task existingTask = getTaskById(id);
+            final Task existingTask = getTaskById(id);
 
             // Retrieve and verify the provider exists
-            User user = userMapper.getUserByEmail(email);
-            if (user == null) {
-                throw new NotFound("User not found");
-            }
-            String providerId = user.getId();
-
-            // Validate task status is ACCEPTED
-            if (existingTask.getStatus() != TaskStatus.ACCEPTED) {
-                throw new BadRequest("Task cannot be started unless it is in ACCEPTED status.");
-            }
-
-            // Validate the user is the assigned provider
-            if (existingTask.getProviderId() == null || !existingTask.getProviderId().equals(providerId)) {
-                throw new BadRequest("You are not authorized to start this task.");
-            }
+            final User user = checkAndReturnUser(email);
+            final String providerId = getString(user, existingTask);
 
             // Update task status to IN_PROGRESS
-            Task updatedTask = taskMapper.updateStatusToInProgress(id, providerId);
-            if (updatedTask == null) {
-                throw new BadRequest("Failed to start task. State may have changed.");
-            }
-
-            return updatedTask;
+           taskMapper.updateStatusToInProgress(id, providerId);
+            return getTaskById(id);
 
         } catch (NotFound | BadRequest e) {
             log.error("Validation Error: {}", e.getMessage());
@@ -269,6 +237,21 @@ public class TaskServiceImpl implements TaskService {
             log.error("Error starting task {}: {}", id, e.getMessage(), e);
             throw new InternalServerError("Unexpected error occurred while starting the task");
         }
+    }
+
+    private static @NonNull String getString(User user, Task existingTask) {
+        final String providerId = user.getId();
+
+        // Validate task status is ACCEPTED
+        if (existingTask.getStatus() != TaskStatus.ACCEPTED) {
+            throw new BadRequest("Task cannot be started unless it is in ACCEPTED status.");
+        }
+
+        // Validate the user is the assigned provider
+        if (existingTask.getProviderId() == null || !existingTask.getProviderId().equals(providerId)) {
+            throw new BadRequest("You are not authorized to start this task.");
+        }
+        return providerId;
     }
 
     /**
@@ -287,13 +270,10 @@ public class TaskServiceImpl implements TaskService {
     @CachePut(value = "task", key = "#id")
     public Task taskPendingConfirmation(String id, String email) {
         try {
-            Task existingTask = getTaskById(id);
+            final Task existingTask = getTaskById(id);
 
-            User user = userMapper.getUserByEmail(email);
-            if (user == null) {
-                throw new NotFound("User with email " + email + " not found");
-            }
-            String providerId = user.getId();
+            final User user = checkAndReturnUser(email);
+            final String providerId = user.getId();
 
             if (existingTask.getStatus() != TaskStatus.IN_PROGRESS) {
                 throw new BadRequest("Task status must be IN_PROGRESS to submit for confirmation.");
@@ -303,13 +283,9 @@ public class TaskServiceImpl implements TaskService {
                 throw new BadRequest("You are not authorized to complete this task.");
             }
 
-            Task updatedTask = taskMapper.updateStatusToPendingConfirmation(id, providerId);
+            taskMapper.updateStatusToPendingConfirmation(id, providerId);
 
-            if (updatedTask == null) {
-                throw new BadRequest("Task completion update failed. The task state may have changed.");
-            }
-
-            return updatedTask;
+            return getTaskById(id);
 
         } catch (NotFound | BadRequest e) {
             log.error("Task Pending Confirmation Validation Error: {}", e.getMessage());
@@ -334,13 +310,10 @@ public class TaskServiceImpl implements TaskService {
     @CachePut(value = "task", key = "#id")
     public Task approveTaskCompletion(String id, String email) {
         try {
-            Task existingTask = getTaskById(id);
+            final Task existingTask = getTaskById(id);
 
-            User user = userMapper.getUserByEmail(email);
-            if (user == null) {
-                throw new NotFound("User with email " + email + " not found");
-            }
-            String clientId = user.getId();
+            final User user = checkAndReturnUser(email);
+            final String clientId = user.getId();
 
             if (existingTask.getStatus() != TaskStatus.PENDING_CONFIRMATION) {
                 throw new BadRequest("Task status must be PENDING CONFIRMATION to submit for completion.");
@@ -350,13 +323,9 @@ public class TaskServiceImpl implements TaskService {
                 throw new BadRequest("You are not authorized to complete this task.");
             }
 
-            Task updatedTask = taskMapper.updateStatusToCompleted(id, clientId);
+           taskMapper.updateStatusToCompleted(id, clientId);
 
-            if (updatedTask == null) {
-                throw new BadRequest("Task completion update failed. The task state may have changed.");
-            }
-
-            return updatedTask;
+            return getTaskById(id);
 
         } catch (NotFound | BadRequest e) {
             log.error("Approve Task Completion Validation Error: {}", e.getMessage());
@@ -368,15 +337,149 @@ public class TaskServiceImpl implements TaskService {
     }
 
 
+    /**
+     * Cancels a task with context-aware behavior based on the requester's role.
+     *
+     * @param id the unique identifier (ID) of the task to cancel
+     * @param email the email address of the user requesting cancellation
+     * @return the updated Task object with status changed to CANCELLED, PENDING, or DISPUTED
+     * @throws NotFound if no task with the given id exists or the user is not found
+     * @throws BadRequest if the task is already finalized (COMPLETED, CANCELLED, or DISPUTED)
+     *                    or if the user is not authorized to cancel (not the client or assigned provider)
+     * @throws InternalServerError if an unexpected error occurs during cancellation
+     *
+     */
     @Override
+    @CachePut(value = "task", key = "#id")
     public Task cancelTask(String id, String email) {
-        return null;
+        try {
+            // Retrieve and verify the user exists
+            final User user = checkAndReturnUser(email);
+
+            // Retrieve and verify the task exists
+            final Task existingTask = getTaskById(id);
+
+            // Validate task is not already finalized
+            if (
+                    existingTask.getStatus().equals(TaskStatus.COMPLETED) ||
+                    existingTask.getStatus().equals(TaskStatus.CANCELLED) ||
+                    existingTask.getStatus().equals(TaskStatus.DISPUTED)) {
+                throw new BadRequest("Task is already finalized or disputed and cannot be canceled.");
+            }
+
+            // Delegate to role-specific cancellation logic
+            clientInitiateCancel(id, user, existingTask);
+            providerInitiateCancel(id, user, existingTask);
+
+            return getTaskById(id);
+
+        }catch (NotFound | BadRequest e) {
+            log.error("Can't find task id {} for email {}", id, email);
+            throw e;
+        }
+        catch (Exception e) {
+            log.error("Unexpected error occurred while canceling task {}: {}", id, e.getMessage(), e);
+            throw new InternalServerError("Unexpected error occurred while canceling the task");
+        }
     }
 
 
+    /**
+     * Handles task cancellation when initiated by a client.
+     *
+     * @param id the unique identifier (ID) of the task to cancel
+     * @param user the User object of the client initiating cancellation
+     * @param task the Task object being cancelled
+     * @throws BadRequest if the user is not the task's client (not authorized)
+     *
+     * Note: TODO - integrate provider partial payment handling before marking as DISPUTED.
+     */
+    private void clientInitiateCancel(String id, User user, Task task) {
+
+        final String role = user.getRole().name();
+        final String userId = user.getId();
+
+        // When a Client Initiates Cancellation
+        if(role.equals("CLIENT")) {
+
+            // Verify the user is the task's client
+            if (!task.getClientId().equals(userId)) {
+                throw new BadRequest("You are not authorized to cancel this task as a client.");
+            }
+
+            log.info("Client Initiate Cancel Task");
+
+            // Cancel if task not yet started (PENDING or ACCEPTED)
+            if(
+                    task.getStatus() == TaskStatus.PENDING || task.getStatus() == TaskStatus.ACCEPTED) {
+                log.info("Client Pending Cancel Task");
+                taskMapper.updateStatusToCancelled(id, userId);
+            }
+            // Dispute if work is already in progress
+            else if(task.getStatus() == TaskStatus.IN_PROGRESS) {
+
+                // TODO - Handle provider partial payment calculation before marking dispute
+
+                log.info("Client In Progress Cancel Task");
+                taskMapper.updateStatusToDisputed(id, userId);
+            }
+
+        }
+
+    }
+
+    /**
+     * Handles task cancellation when initiated by a provider.
+     *
+     * @param id the unique identifier (ID) of the task to cancel
+     * @param user the User object of the provider initiating cancellation
+     * @param task the Task object being cancelled
+     * @throws BadRequest if the user is not the assigned provider (not authorized)
+     *
+     * Note: TODO - integrate task re-marketing logic to attract new providers when status reverts to PENDING.
+     */
+    private void providerInitiateCancel(String id, User user, Task task) {
+
+        final String role = user.getRole().name();
+        final String userId = user.getId();
+
+        // When a Provider Initiates Cancellation
+        if(role.equals("PROVIDER")) {
+
+            // Verify the user is the assigned provider
+            if (task.getProviderId() == null || !task.getProviderId().equals(userId)){
+                throw new BadRequest("You are not authorized to cancel this task as a provider.");
+            }
+
+            log.info("Provider Initiate Cancel Task");
+
+            // Revert to PENDING if provider cancels before starting work
+            if(task.getStatus() == TaskStatus.ACCEPTED) {
+                log.info("Provider Accepted Cancel Task");
+
+                // TODO - Re-market the task to attract new providers (notification, listing update, etc.)
+
+                taskMapper.updateStatusToPending(id, userId);
+            }
+
+            // Dispute if provider cancels during active work
+            if(task.getStatus() == TaskStatus.IN_PROGRESS) {
+                log.info("Provider In Progress Cancel Task");
+                taskMapper.updateStatusToDisputed(id, userId);
+            }
+        }
+    }
+
+    private User checkAndReturnUser(String identifier){
+        final User user = userMapper.getUserByIdentifier(identifier);
+        if (user == null) {
+            throw new NotFound("User with this identifier " + identifier + " not found");
+        }
+        return user;
+    }
 
     private static String getProviderId(User user, Task existingTask) {
-        String providerId = user.getId();
+        final String providerId = user.getId();
 
         // Check if existing task status != 'PENDING' and providerId IS NOT NULL
         if (

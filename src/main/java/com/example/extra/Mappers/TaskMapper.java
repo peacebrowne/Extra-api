@@ -27,31 +27,46 @@ public interface TaskMapper {
     @Select("SELECT * FROM tasks WHERE clientId = (SELECT id FROM users WHERE email = #{email})::UUID")
     List<Task> getAllTasks(@Param("email") String email);
 
-    @Select("UPDATE tasks SET status = 'ACCEPTED', providerId = #{providerId}::UUID " +
+    @Update("UPDATE tasks SET status = 'ACCEPTED', providerId = #{providerId}::UUID " +
             "WHERE id = #{id}::UUID " +
             "AND status = 'PENDING' " +
-            "AND providerId IS NULL " +
-            "RETURNING *")
-    Task updateStatusToAccepted(@Param("id") String id, @Param("providerId") String providerId);
+            "AND providerId IS NULL " )
+    void updateStatusToAccepted(@Param("id") String id, @Param("providerId") String providerId);
 
-    @Select("UPDATE tasks SET status = 'PENDING_CONFIRMATION' " +
+    @Update("UPDATE tasks SET status = 'PENDING_CONFIRMATION' " +
             "WHERE id = #{id}::UUID " +
             "AND providerId = #{providerId}::UUID " +
-            "AND status = 'IN_PROGRESS' " +
-            "RETURNING *")
-    Task updateStatusToPendingConfirmation(@Param("id") String id, @Param("providerId") String providerId);
+            "AND status = 'IN_PROGRESS' ")
+    void updateStatusToPendingConfirmation(@Param("id") String id, @Param("providerId") String providerId);
     
-    @Select("UPDATE tasks SET status = 'COMPLETED' " +
+    @Update("UPDATE tasks SET status = 'COMPLETED' " +
             "WHERE id = #{id}::UUID " +
             "AND clientId = #{clientId}::UUID " +
-            "AND status = 'PENDING_CONFIRMATION' " +
-            "RETURNING *")
-    Task updateStatusToCompleted(@Param("id") String id, @Param("clientId") String clientId);
+            "AND status = 'PENDING_CONFIRMATION' ")
+    void updateStatusToCompleted(@Param("id") String id, @Param("clientId") String clientId);
 
-    @Select("UPDATE tasks SET status = 'IN_PROGRESS' " +
+    @Update("UPDATE tasks SET status = 'IN_PROGRESS' " +
             "WHERE id = #{id}::UUID " +
             "AND providerId = #{providerId}::UUID " +
-            "AND status = 'ACCEPTED' " +
-            "RETURNING *")
-    Task updateStatusToInProgress(String id, String providerId);
+            "AND status = 'ACCEPTED' ")
+    void updateStatusToInProgress(String id, String providerId);
+
+    @Update("UPDATE tasks SET status = 'CANCELLED', providerId = NULL " +
+            "WHERE id = #{id}::UUID " +
+            "AND clientId = #{userId}::UUID " +
+            "OR providerId = #{userId}::UUID ")
+    void updateStatusToCancelled(String id, String userId);
+
+    @Update("UPDATE tasks SET status = 'DISPUTED' " +
+            "WHERE id = #{id}::UUID " +
+            "AND clientId = #{userId}::UUID " +
+            "OR providerId = #{userId}::UUID ")
+    void updateStatusToDisputed(String id, String userId);
+
+    @Update("UPDATE tasks SET status = 'PENDING' " +
+            "WHERE id = #{id}::UUID " +
+            "AND providerId = #{userId}::UUID ")
+    void updateStatusToPending(String id, String userId);
+
+
 }

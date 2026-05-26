@@ -15,7 +15,7 @@ import java.util.Set;
 public class UserPrincipal implements UserDetails {
 
     private final LoginRequest user;
-    private Roles role;
+    private final Roles role;
 
     public UserPrincipal(LoginRequest user) {
         this.user = user;

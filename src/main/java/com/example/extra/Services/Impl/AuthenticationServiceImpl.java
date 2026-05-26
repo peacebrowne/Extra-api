@@ -86,7 +86,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
         if (authentication.isAuthenticated()) {
 
-            User user = userMapper.getUserByEmail(login.getEmail());
+            User user = userMapper.getUserByIdentifier(login.getEmail());
 
             if (user != null) {
                 return jwtService.generateToken(user);
@@ -98,7 +98,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
     public UserDTO register(User user){
         try {
-            User existingUser = userMapper.getUserByEmail(user.getEmail());
+            User existingUser = userMapper.getUserByIdentifier(user.getEmail());
 
             if (existingUser != null) {
                 throw new Conflict("User with this email: '" + user.getEmail() + "' already exists.");

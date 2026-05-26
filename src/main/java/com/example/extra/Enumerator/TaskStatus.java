@@ -25,7 +25,7 @@ public enum TaskStatus {
   IN_PROGRESS,
 
   /**
-   * The task was cancelled before completion (by client or system).
+   * The task was canceled before completion (by client or system).
    */
   CANCELLED,
 
@@ -37,5 +37,6 @@ public enum TaskStatus {
   /**
    * A dispute has been raised for this task and requires manual resolution.
    */
-  DISPUTED;
+  DISPUTED,
+
 }
