@@ -430,8 +430,7 @@ public class TaskServiceImpl implements TaskService {
             log.info("Client Initiate Cancel Task");
 
             // Cancel if task not yet started (PENDING or ACCEPTED)
-            if(
-                    task.getStatus() == TaskStatus.PENDING || task.getStatus() == TaskStatus.ACCEPTED) {
+            if(task.getStatus() == TaskStatus.PENDING || task.getStatus() == TaskStatus.ACCEPTED) {
                 log.info("Client Pending Cancel Task");
                 taskMapper.updateStatusToCancelled(id, userId);
             }

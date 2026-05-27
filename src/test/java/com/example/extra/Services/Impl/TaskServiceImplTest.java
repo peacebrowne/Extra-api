@@ -35,6 +35,7 @@ class TaskServiceImplTest {
     private User clientUser;
     private User providerUser;
 
+
     @BeforeEach
     void setUp() {
         clientUser = new User();
@@ -60,6 +61,36 @@ class TaskServiceImplTest {
         task.setProviderId(null);
     }
 
+    @Nested
+    @DisplayName("Get Task By Id Test")
+    class GetTaskByIdTest {
+
+        @Test
+        @DisplayName("Should return task successfully when valid id exist")
+        void shouldReturnTaskSuccessfully() {
+            final String taskId = task.getId();
+
+            when(taskMapper.getTaskById(taskId)).thenReturn(task);
+
+            final Task returnedTask = taskServiceImpl.getTaskById(taskId);
+
+            assertNotNull(returnedTask);
+            assertEquals(task.getId(), returnedTask.getId());
+            verify(taskMapper, times(1)).getTaskById(taskId);
+        }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when task does not exist")
+        void shouldThrowNotFoundExceptionWhenTaskDoesNotExist() {
+            final String taskId = task.getId();
+
+            when(taskMapper.getTaskById(taskId)).thenReturn(null);
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.getTaskById(taskId));
+
+            assertEquals("Task with id " + taskId + " not found", exception.getMessage());
+            verify(taskMapper, times(1)).getTaskById(taskId);
+        }
+    }
 
     @Nested
     @DisplayName("Create Task Test")
@@ -240,7 +271,32 @@ class TaskServiceImplTest {
             verify(taskMapper, times(1)).updateStatusToAccepted(taskId, providerUser.getId());
             verify(taskMapper, times(2)).getTaskById(taskId);
         }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when user does not exist")
+        void shouldThrowNotFoundExceptionWhenUserDoesNotExist() {
+
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(null);
+
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.acceptTask(taskId, userEmail));
+
+            assertEquals("User with this identifier " + userEmail + " not found", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when task does not exist")
+        void shouldThrowNotFoundExceptionWhenTaskDoesNotExist() {
+
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(providerUser);
+            when(taskMapper.getTaskById(taskId)).thenReturn(null);
+
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.acceptTask(taskId, userEmail));
+
+            assertEquals("Task with id " + taskId + " not found", exception.getMessage());
+        }
     }
+
+
 
 }
 
