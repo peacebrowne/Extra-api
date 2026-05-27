@@ -69,7 +69,7 @@ public class TaskServiceImpl implements TaskService {
      *
     */
     @Override
-    @CachePut(value = "task", key = "#existingTask.id")
+    @CachePut(value = "task", key = "#task.id")
     public Task updateTask(Task task) {
         try {
 
@@ -85,7 +85,7 @@ public class TaskServiceImpl implements TaskService {
             // Persist the updated task to the database
             taskMapper.updateTask(task);
 
-            return existingTask;
+            return getTaskById(task.getId());
 
         }catch (NotFound ex){
             log.error(ex.getMessage());
@@ -110,11 +110,15 @@ public class TaskServiceImpl implements TaskService {
     */
     @Override
     @CacheEvict(value = "task", key = "#id")
-    public Task deleteTask(String id) {
+    public Task deleteTask(String id, String email) {
         try {
+
+            checkAndReturnUser(email);
+
             // Verify the task exists before attempting deletion
             final Task existingTask = getTaskById(id);
             taskMapper.deleteTask(id);
+
             return existingTask;
         }catch (BadRequest | NotFound e) {
             log.error("ERROR: {}", e.getMessage(), e);
@@ -190,12 +194,21 @@ public class TaskServiceImpl implements TaskService {
     public Task acceptTask(String id, String email) {
         try {
 
+            final User user = checkAndReturnUser(email);
             final Task existingTask = getTaskById(id);
 
-            final User user = checkAndReturnUser(email);
-            final String providerId = getProviderId(user, existingTask);
+            // Check if existing task status != 'PENDING' and providerId IS NOT NULL
+            if (existingTask.getStatus() != TaskStatus.PENDING ||
+                    existingTask.getProviderId() != null) {
+                throw new BadRequest("Task is not available to be accepted");
+            }
 
-            taskMapper.updateStatusToAccepted(id, providerId);
+            // Check if PROVIDER wants to accept their own task
+            if (existingTask.getClientId().equals(user.getId())) {
+                throw new BadRequest("You cannot accept your own task");
+            }
+
+            taskMapper.updateStatusToAccepted(id, user.getId());
 
             return getTaskById(id);
 
@@ -487,13 +500,6 @@ public class TaskServiceImpl implements TaskService {
 
     private static String getProviderId(User user, Task existingTask) {
         final String providerId = user.getId();
-
-        // Check if existing task status != 'PENDING' and providerId IS NOT NULL
-        if (
-                existingTask.getStatus() != TaskStatus.PENDING || existingTask.getProviderId() != null
-        ) {
-            throw new BadRequest("Task is not available to be accepted");
-        }
 
         // Check if PROVIDER wants to accept their own task
         if (existingTask.getClientId().equals(providerId)) {

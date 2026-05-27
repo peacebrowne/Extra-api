@@ -32,7 +32,6 @@ import java.util.Optional;
 @Slf4j
 public class AuthenticationServiceImpl implements UserDetailsService {
 
-
     @Autowired
     AuthenticationMapper authenticationMapper;
 
@@ -98,7 +97,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
     public UserDTO register(User user){
         try {
-            User existingUser = userMapper.getUserByIdentifier(user.getEmail());
+            User existingUser = userMapper.getUserByEmail(user.getEmail());
 
             if (existingUser != null) {
                 throw new Conflict("User with this email: '" + user.getEmail() + "' already exists.");
