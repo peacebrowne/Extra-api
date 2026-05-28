@@ -32,135 +32,6 @@ public class TaskServiceImpl implements TaskService {
     private final UserMapper userMapper;
 
     /**
-     * Creates a new task and persists it to the database.
-     *
-     * @param task the Task object to create (should include title, description, clientId, etc.)
-     * @return the created Task object with an assigned id
-     * @throws NotFound if no task with the given id exists
-     * @throws InternalServerError if an unexpected error occurs during task creation
-     */
-    @Override
-    @CachePut(value = "task", key = "#result.id")
-    public Task createTask(Task task) {
-        try {
-
-            checkAndReturnUser(task.getClientId());
-
-            // Create and persist the task to the database
-            return taskMapper.createTask(task);
-
-        }catch (NotFound ex){
-            log.error(ex.getMessage());
-            throw ex;
-        }
-        catch (Exception e) {
-            log.error("Unexpected error occurred while creating task: {}", e.getMessage());
-            throw new InternalServerError("Unexpected error occurred while creating task");
-        }
-    }
-
-    /**
-     * Updates an existing task with new values.
-     *
-     * @param task the Task object containing updated field values (id is required)
-     * @return the updated Task object
-     * @throws NotFound if no task with the given id exists
-     * @throws InternalServerError if an unexpected error occurs during update
-     *
-    */
-    @Override
-    @CachePut(value = "task", key = "#task.id")
-    public Task updateTask(Task task) {
-        try {
-
-            checkAndReturnUser(task.getClientId());
-
-            // Retrieve and verify the task exists
-            final Task existingTask = getTaskById(task.getId());
-
-            // Update title and description only if provided (non-null)
-            Optional.ofNullable(task.getTitle()).ifPresent(existingTask::setTitle);
-            Optional.ofNullable(task.getDescription()).ifPresent(existingTask::setDescription);
-
-            // Persist the updated task to the database
-            taskMapper.updateTask(task);
-
-            return getTaskById(task.getId());
-
-        }catch (NotFound ex){
-            log.error(ex.getMessage());
-            throw ex;
-        }
-        catch (Exception e) {
-            log.error("Unexpected error occurred while updating task: {}", e.getMessage());
-            throw new InternalServerError("Unexpected error occurred while updating task");
-        }
-    }
-
-
-    /**
-     * Deletes a task by its unique identifier.
-     *
-     * @param id the unique identifier (ID) of the task to delete
-     * @return the Task object that was deleted
-     * @throws NotFound if no task with the given id exists
-     * @throws BadRequest if the task cannot be deleted due to invalid state
-     * @throws InternalServerError if an unexpected error occurs during deletion
-     *
-    */
-    @Override
-    @CacheEvict(value = "task", key = "#id")
-    public Task deleteTask(String id, String email) {
-        try {
-
-            checkAndReturnUser(email);
-
-            // Verify the task exists before attempting deletion
-            final Task existingTask = getTaskById(id);
-            taskMapper.deleteTask(id);
-
-            return existingTask;
-        }catch (BadRequest | NotFound e) {
-            log.error("ERROR: {}", e.getMessage(), e);
-            throw e;
-        }catch (Exception e) {
-            log.error("Unexpected error occurred while deleting task: {}", e.getMessage());
-            throw new InternalServerError("Unexpected error occurred while deleting task");
-        }
-    }
-
-
-    /**
-     * Retrieves a single task by its unique identifier.
-     *
-     * @param id the unique identifier (ID) of the task to retrieve
-     * @return the Task object if found
-     * @throws NotFound if no task with the given id exists
-     * @throws InternalServerError if an unexpected error occurs during retrieval
-     *
-    */
-    @Override
-    @Cacheable(value = "task", key = "#id")
-    public Task getTaskById(String id) {
-        try {
-
-            final Task task = taskMapper.getTaskById(id);
-            if (task == null) {
-                log.warn("Task with id {} not found", id);
-                throw new NotFound("Task with id " + id + " not found");
-            }
-            return task;
-        } catch (NotFound e) {
-            log.error("Error: {}", e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error occurred while retrieving task: {}", e.getMessage());
-            throw new InternalServerError("Unexpected error occurred while retrieving task");
-        }
-    }
-
-
-    /**
      * Retrieves all tasks associated with a given user email.
      *
      * @param email the email address of the user whose tasks are to be retrieved
@@ -178,6 +49,129 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
+    /**
+     * Retrieves a single task by its unique identifier.
+     *
+     * @param id the unique identifier (ID) of the task to retrieve
+     * @return the Task object if found
+     * @throws NotFound if no task with the given id exists
+     * @throws InternalServerError if an unexpected error occurs during retrieval
+     *
+     */
+    @Override
+    @Cacheable(value = "task", key = "#id")
+    public Task getTaskById(String id) {
+        try {
+
+            log.info("\n\n Retrieving task from db \n\n");
+
+            final Task task = taskMapper.getTaskById(id);
+            if (task == null) {
+                log.warn("Task with id {} not found", id);
+                throw new NotFound("Task with id " + id + " not found");
+            }
+            return task;
+        } catch (NotFound e) {
+            log.error("Error: {}", e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while retrieving task: {}", e.getMessage());
+            throw new InternalServerError("Unexpected error occurred while retrieving task");
+        }
+    }
+
+    /**
+     * Creates a new task and saves it to the database.
+     *
+     * @param task the Task object to create (should include title, description, clientId, etc.)
+     * @return the created Task object with an assigned id
+     * @throws NotFound if no task with the given id exists
+     * @throws InternalServerError if an unexpected error occurs during task creation
+     */
+    @Override
+    @CachePut(value = "task", key = "#result.id")
+    public Task createTask(Task task) {
+        try {
+            // Check if the CLIENT exists before creating the task
+            checkAndReturnUser(task.getClientId());
+
+            // Create and save the task to the database
+            return taskMapper.createTask(task);
+
+        } catch (NotFound ex){
+            log.error(ex.getMessage());
+            throw ex;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while creating task: {}", e.getMessage());
+            throw new InternalServerError("Unexpected error occurred while creating task");
+        }
+    }
+
+    /**
+     * Updates an existing task with new values.
+     *
+     * @param task the Task object containing updated field values (id is required)
+     * @return the updated Task object
+     * @throws NotFound if no task with the given id exists
+     * @throws InternalServerError if an unexpected error occurs during update
+     *
+     */
+    @Override
+    @CachePut(value = "task", key = "#task.id")
+    public Task updateTask(Task task) {
+        try {
+            checkAndReturnUser(task.getClientId());
+
+            // Retrieve and verify the task exists
+            final Task existingTask = getTaskById(task.getId());
+
+            // Update title and description only if provided (non-null)
+            Optional.ofNullable(task.getTitle()).ifPresent(existingTask::setTitle);
+            Optional.ofNullable(task.getDescription()).ifPresent(existingTask::setDescription);
+
+            // Save the updated task to the database
+            taskMapper.updateTask(task);
+
+            return getTaskById(task.getId());
+
+        } catch (NotFound ex){
+            log.error(ex.getMessage());
+            throw ex;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while updating task: {}", e.getMessage());
+            throw new InternalServerError("Unexpected error occurred while updating task");
+        }
+    }
+
+    /**
+     * Deletes a task by its unique identifier.
+     *
+     * @param id the unique identifier (ID) of the task to delete
+     * @return the Task object that was deleted
+     * @throws NotFound if no task with the given id exists
+     * @throws BadRequest if the task cannot be deleted due to invalid state
+     * @throws InternalServerError if an unexpected error occurs during deletion
+     *
+     */
+    @Override
+    @CacheEvict(value = "task", key = "#id")
+    public Task deleteTask(String id, String email) {
+        try {
+            checkAndReturnUser(email);
+
+            // Verify the task exists before attempting deletion
+            final Task existingTask = getTaskById(id);
+            taskMapper.deleteTask(id);
+
+            return existingTask;
+        } catch (BadRequest | NotFound e) {
+            log.error("ERROR: {}", e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while deleting task: {}", e.getMessage());
+            throw new InternalServerError("Unexpected error occurred while deleting task");
+        }
+    }
 
     /**
      * Marks a task as accepted by a provider.
@@ -193,7 +187,6 @@ public class TaskServiceImpl implements TaskService {
     @CachePut(value = "task", key = "#id")
     public Task acceptTask(String id, String email) {
         try {
-
             final User user = checkAndReturnUser(email);
             final Task existingTask = getTaskById(id);
 
@@ -221,7 +214,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-
     /**
      * Transitions a task from ACCEPTED to IN_PROGRESS when the provider begins work.
      *
@@ -230,24 +222,32 @@ public class TaskServiceImpl implements TaskService {
      * @return the updated Task object with status changed to "IN_PROGRESS"
      * @throws NotFound if no task with the given id exists or the user is not found
      * @throws BadRequest if the task status is not ACCEPTED or if the user is not the assigned
-     *                    provider (not authorized to start this task)
+     * provider (not authorized to start this task)
      * @throws InternalServerError if an unexpected error occurs during the operation
      *
-    */
+     */
     @Override
     @CachePut(value = "task", key = "#id")
     public Task startTask(String id, String email) {
-
         try {
+            // Retrieve and verify the provider exists
+            final User user = checkAndReturnUser(email);
+
             // Retrieve and verify the task exists
             final Task existingTask = getTaskById(id);
 
-            // Retrieve and verify the provider exists
-            final User user = checkAndReturnUser(email);
-            final String providerId = getString(user, existingTask);
+            // Validate task status is ACCEPTED
+            if (existingTask.getStatus() != TaskStatus.ACCEPTED) {
+                throw new BadRequest("Task cannot be started unless it is in ACCEPTED status.");
+            }
+
+            if (existingTask.getProviderId() == null || !existingTask.getProviderId().equals(user.getId())) {
+                throw new BadRequest("You are not authorized to start this task.");
+            }
 
             // Update task status to IN_PROGRESS
-           taskMapper.updateStatusToInProgress(id, providerId);
+            taskMapper.updateStatusToInProgress(id, user.getId());
+
             return getTaskById(id);
 
         } catch (NotFound | BadRequest e) {
@@ -259,21 +259,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    private static @NonNull String getString(User user, Task existingTask) {
-        final String providerId = user.getId();
-
-        // Validate task status is ACCEPTED
-        if (existingTask.getStatus() != TaskStatus.ACCEPTED) {
-            throw new BadRequest("Task cannot be started unless it is in ACCEPTED status.");
-        }
-
-        // Validate the user is the assigned provider
-        if (existingTask.getProviderId() == null || !existingTask.getProviderId().equals(providerId)) {
-            throw new BadRequest("You are not authorized to start this task.");
-        }
-        return providerId;
-    }
-
     /**
      * Marks a task as pending confirmation after provider work completion
      * and await the client's confirmation.
@@ -283,9 +268,9 @@ public class TaskServiceImpl implements TaskService {
      * @return the updated Task object with status changed to "PENDING_CONFIRMATION"
      * @throws NotFound if no task with the given id exists or the user is not found
      * @throws BadRequest if the task status is not IN_PROGRESS or if the user is not the assigned
-     *                    provider (not authorized to submit for confirmation)
+     * provider (not authorized to submit for confirmation)
      * @throws InternalServerError if an unexpected error occurs during the operation
-    */
+     */
     @Override
     @CachePut(value = "task", key = "#id")
     public Task taskPendingConfirmation(String id, String email) {
@@ -343,7 +328,7 @@ public class TaskServiceImpl implements TaskService {
                 throw new BadRequest("You are not authorized to complete this task.");
             }
 
-           taskMapper.updateStatusToCompleted(id, clientId);
+            taskMapper.updateStatusToCompleted(id, clientId);
 
             return getTaskById(id);
 
@@ -355,7 +340,6 @@ public class TaskServiceImpl implements TaskService {
             throw new InternalServerError("Unexpected error occurred while updating task completion");
         }
     }
-
 
     /**
      * Cancels a task with context-aware behavior based on the requester's role.
@@ -490,7 +474,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     private User checkAndReturnUser(String identifier){
-        final User user = userMapper.getUserByIdentifier(identifier);
+        final User user = userMapper.getUserByEmail(identifier);
         if (user == null) {
             throw new NotFound("User with this identifier " + identifier + " not found");
         }

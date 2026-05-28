@@ -85,7 +85,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
 
         if (authentication.isAuthenticated()) {
 
-            User user = userMapper.getUserByIdentifier(login.getEmail());
+            User user = userMapper.getUserByEmail(login.getEmail());
 
             if (user != null) {
                 return jwtService.generateToken(user);

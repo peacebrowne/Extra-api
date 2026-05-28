@@ -4,6 +4,7 @@ import com.example.extra.Entities.Task;
 import com.example.extra.Entities.User;
 import com.example.extra.Enumerator.Roles;
 import com.example.extra.Enumerator.TaskStatus;
+import com.example.extra.Exceptions.Custom.BadRequest;
 import com.example.extra.Exceptions.Custom.NotFound;
 import com.example.extra.Mappers.TaskMapper;
 import com.example.extra.Mappers.UserMapper;
@@ -234,7 +235,7 @@ class TaskServiceImplTest {
     @DisplayName("Accept Task Test")
     class AcceptTaskTest {
 
-        private Task completedTask;
+        private Task acceptedTask;
         private String taskId;
         private String userEmail;
 
@@ -243,11 +244,11 @@ class TaskServiceImplTest {
             taskId = task.getId();
             userEmail = providerUser.getEmail();
 
-            completedTask = new Task();
-            completedTask.setId(task.getId());
-            completedTask.setClientId(clientUser.getId());
-            completedTask.setStatus(TaskStatus.ACCEPTED);
-            completedTask.setProviderId(providerUser.getId());
+            acceptedTask = new Task();
+            acceptedTask.setId(task.getId());
+            acceptedTask.setClientId(clientUser.getId());
+            acceptedTask.setStatus(TaskStatus.ACCEPTED);
+            acceptedTask.setProviderId(providerUser.getId());
         }
 
         @Test
@@ -255,7 +256,7 @@ class TaskServiceImplTest {
         void shouldAcceptTaskSuccessfully() {
             when(taskMapper.getTaskById(task.getId()))
                     .thenReturn(task)
-                    .thenReturn(completedTask);
+                    .thenReturn(acceptedTask);
             when(userMapper.getUserByIdentifier(userEmail)).thenReturn(providerUser);
 
             doNothing().when(taskMapper).updateStatusToAccepted(taskId, providerUser.getId());
@@ -266,7 +267,7 @@ class TaskServiceImplTest {
             assertEquals(TaskStatus.ACCEPTED, resultTask.getStatus(), "The returned task status must be ACCEPTED");
             assertEquals(providerUser.getId(), resultTask.getProviderId());
 
-            assertEquals(completedTask.getId(), resultTask.getId(), "");
+            assertEquals(acceptedTask.getId(), resultTask.getId(), "");
 
             verify(taskMapper, times(1)).updateStatusToAccepted(taskId, providerUser.getId());
             verify(taskMapper, times(2)).getTaskById(taskId);
@@ -296,7 +297,140 @@ class TaskServiceImplTest {
         }
     }
 
+    @Nested
+    @DisplayName("Start Task Test")
+    class StartTaskTest {
 
+        private Task startedTask;
+        private String taskId;
+        private String userEmail;
+
+        @BeforeEach
+        void setUp() {
+            taskId = task.getId();
+            userEmail = providerUser.getEmail();
+
+            task.setStatus(TaskStatus.ACCEPTED);
+            task.setProviderId(providerUser.getId());
+
+            startedTask = new Task();
+            startedTask.setId(task.getId());
+            startedTask.setClientId(clientUser.getId());
+            startedTask.setStatus(TaskStatus.IN_PROGRESS);
+            startedTask.setProviderId(providerUser.getId());
+        }
+
+        @Test
+        @DisplayName("Should start task successfully with valid id")
+        void shouldStartTaskSuccessfully() {
+
+            when(taskMapper.getTaskById(task.getId()))
+                    .thenReturn(task)
+                    .thenReturn(startedTask);
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(providerUser);
+
+            doNothing().when(taskMapper).updateStatusToInProgress(taskId, providerUser.getId());
+
+            Task resultTask = taskServiceImpl.startTask(taskId, userEmail);
+
+            assertNotNull(resultTask);
+            assertEquals(TaskStatus.IN_PROGRESS, resultTask.getStatus(), "The returned task status must be IN_PROGRESS");
+            assertEquals(providerUser.getId(), resultTask.getProviderId());
+
+            assertEquals(startedTask.getId(), resultTask.getId());
+
+            verify(taskMapper, times(1)).updateStatusToInProgress(taskId, providerUser.getId());
+            verify(taskMapper, times(2)).getTaskById(taskId);
+        }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when user does not exist")
+        void shouldThrowNotFoundExceptionWhenUserDoesNotExist() {
+
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(null);
+
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.startTask(taskId, userEmail));
+
+            assertEquals("User with this identifier " + userEmail + " not found", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw NotFound exception when task does not exist")
+        void shouldThrowNotFoundExceptionWhenTaskDoesNotExist() {
+
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(providerUser);
+            when(taskMapper.getTaskById(taskId)).thenReturn(null);
+
+            final NotFound exception = assertThrows(NotFound.class, () -> taskServiceImpl.startTask(taskId, userEmail));
+
+            assertEquals("Task with id " + taskId + " not found", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequest when task is not in ACCEPTED status")
+        void shouldThrowBadRequestWhenTaskIsNotInAcceptedStatus() {
+            task.setStatus(TaskStatus.PENDING);
+
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(providerUser);
+            when(taskMapper.getTaskById(taskId)).thenReturn(task);
+
+            final BadRequest exception = assertThrows(BadRequest.class, () -> taskServiceImpl.startTask(taskId, userEmail));
+
+            assertEquals("Task cannot be started unless it is in ACCEPTED status.", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequest when user is not in authorized to start task")
+        void shouldThrowBadRequestWhenUserIsNotInAuthorizedToStartTask() {
+            task.setProviderId("different_user_id");
+
+            when(userMapper.getUserByIdentifier(userEmail)).thenReturn(providerUser);
+            when(taskMapper.getTaskById(taskId)).thenReturn(task);
+
+            final BadRequest exception = assertThrows(BadRequest.class, () -> taskServiceImpl.startTask(taskId, userEmail));
+
+            assertEquals("You are not authorized to start this task.", exception.getMessage());
+        }
+    }
+
+
+    @Nested
+    @DisplayName("Cancel Task Test")
+    class CancelTaskTest {
+        private String taskId;
+        private String userEmail;
+        Task canceledTask;
+
+        @BeforeEach
+        void setUp() {
+            taskId = task.getId();
+            userEmail = clientUser.getEmail();
+
+            canceledTask = new Task();
+            canceledTask.setId(taskId);
+            canceledTask.setClientId(clientUser.getId());
+            canceledTask.setStatus(TaskStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("Client should cancel task successfully with valid id when task is still pending")
+        void ClientShouldCancelTaskSuccessfully() {
+            when(userMapper.getUserByEmail(userEmail)).thenReturn(clientUser);
+            when(taskMapper.getTaskById(taskId)).thenReturn(task)
+                    .thenReturn(canceledTask);
+
+            doNothing().when(taskMapper).updateStatusToCancelled(taskId, clientUser.getId());
+
+            Task resultTask = taskServiceImpl.cancelTask(taskId, userEmail);
+
+            assertNotNull(resultTask);
+            assertEquals(TaskStatus.CANCELLED, resultTask.getStatus(), "The returned task status must be CANCELLED");
+            assertEquals(clientUser.getId(), resultTask.getClientId());
+
+            verify(taskMapper, times(1)).updateStatusToCancelled(taskId, clientUser.getId());
+            verify(taskMapper, times(2)).getTaskById(taskId);
+        }
+    }
 
 }
 

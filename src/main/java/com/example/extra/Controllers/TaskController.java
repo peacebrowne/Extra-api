@@ -38,6 +38,13 @@ public class TaskController {
         return Success.OK("Successfully created task", taskServiceImpl.createTask(task));
     }
 
+    // Creates a new service request (Status: PENDING).
+    @PatchMapping("/update")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<?> updateTask(@Valid @RequestBody Task task) {
+        return Success.OK("Successfully created task", taskServiceImpl.updateTask(task));
+    }
+
     // Assigns the authenticated provider's ID to the task and updates status to ACCEPTED.
     @PatchMapping("/{id}/accept")
     @PreAuthorize("hasRole('PROVIDER')")

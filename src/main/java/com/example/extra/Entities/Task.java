@@ -68,7 +68,7 @@ public class Task {
     /**
      * Creation timestamp for the task.
      */
-    private LocalDateTime created;
+    private LocalDateTime createdAt;
 
     /**
      *  If provided it must be now or in the future (can't schedule in the past).
@@ -76,5 +76,5 @@ public class Task {
      *  Validation: when present, must be @FutureOrPresent.
      *  */
     @FutureOrPresent(message = "scheduled date must be now or in the future")
-    private LocalDateTime scheduled;
+    private LocalDateTime scheduledAt;
 }
