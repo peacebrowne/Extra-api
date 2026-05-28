@@ -10,11 +10,17 @@ import com.example.extra.Mappers.TaskMapper;
 import com.example.extra.Mappers.UserMapper;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -405,19 +411,22 @@ class TaskServiceImplTest {
             taskId = task.getId();
         }
 
-        @Test
+        @ParameterizedTest
+        @EnumSource(value = TaskStatus.class, names = { "PENDING", "ACCEPTED" })
         @DisplayName("Client should cancel task successfully with valid id when task is still pending")
-        void ClientShouldCancelTaskSuccessfullyWhenTaskIsStillPending() {
+        void ClientShouldCancelTaskSuccessfullyWhenTaskIsStillPending(TaskStatus status) {
             userEmail = clientUser.getEmail();
+            task.setStatus(status);
 
             Task canceledTask = new Task();
             canceledTask.setId(taskId);
             canceledTask.setClientId(clientUser.getId());
             canceledTask.setStatus(TaskStatus.CANCELLED);
 
-            when(userMapper.getUserByEmail(userEmail)).thenReturn(clientUser);
-            when(taskMapper.getTaskById(taskId)).thenReturn(task)
-                    .thenReturn(canceledTask);
+
+            given(userMapper.getUserByEmail(userEmail)).willReturn(clientUser);
+            given(taskMapper.getTaskById(taskId)).willReturn(task)
+                    .willReturn(canceledTask);
 
             doNothing().when(taskMapper).updateStatusToCancelled(taskId, clientUser.getId());
 
@@ -427,8 +436,8 @@ class TaskServiceImplTest {
             assertEquals(TaskStatus.CANCELLED, resultTask.getStatus(), "The returned task status must be CANCELLED");
             assertEquals(clientUser.getId(), resultTask.getClientId());
 
-            verify(taskMapper, times(1)).updateStatusToCancelled(taskId, clientUser.getId());
-            verify(taskMapper, times(2)).getTaskById(taskId);
+            then(taskMapper).should(times(1)).updateStatusToCancelled(taskId, clientUser.getId());
+            then(taskMapper).should(times(2)).getTaskById(taskId);
         }
 
         @Test
@@ -459,6 +468,43 @@ class TaskServiceImplTest {
 
             verify(taskMapper, times(1)).updateStatusToPending(taskId, providerUser.getId());
             verify(taskMapper, times(2)).getTaskById(taskId);
+        }
+
+
+        @ParameterizedTest
+        @EnumSource(value = TaskStatus.class, names = { "COMPLETED", "CANCELLED", "DISPUTED" })
+        @DisplayName("Should Throw BadRequest when Task status is COMPLETED, CANCELLED or DISPUTED")
+        void shouldThrowBadRequestWhenTaskStatusIsCompleted(TaskStatus status) {
+            userEmail = clientUser.getEmail();
+            task.setStatus(status);
+
+            when(userMapper.getUserByEmail(userEmail)).thenReturn(clientUser);
+            when(taskMapper.getTaskById(taskId)).thenReturn(task);
+
+            final BadRequest exception = assertThrows(BadRequest.class, () -> taskServiceImpl.cancelTask(taskId, userEmail));
+
+            assertEquals("Task is already finalized or disputed and cannot be canceled.", exception.getMessage());
+            then(taskMapper).shouldHaveNoMoreInteractions();
+        }
+
+
+        @Disabled("Temporary disabled")
+        @ParameterizedTest
+        @ValueSource(strings = {"ADMIN", "GUEST", "SUPPORT"})
+        @DisplayName("Should throw BadRequest when user role for cancellation is invalid")
+        void shouldThrowBadRequestWhenUserRoleIsInvalid(String role) {
+            userEmail = clientUser.getEmail();
+
+            clientUser.setRole(Roles.valueOf(role));
+
+            given(userMapper.getUserByEmail(userEmail)).willReturn(clientUser);
+            given(taskMapper.getTaskById(taskId)).willReturn(task);
+
+            final BadRequest exception = assertThrows(BadRequest.class, () -> taskServiceImpl.cancelTask(taskId, userEmail));
+
+            assertEquals("Invalid user role for cancellation", exception.getMessage());
+            then(userMapper).shouldHaveNoMoreInteractions();
+            then(taskMapper).shouldHaveNoMoreInteractions();
         }
     }
 
