@@ -474,7 +474,7 @@ class TaskServiceImplTest {
         @ParameterizedTest
         @EnumSource(value = TaskStatus.class, names = { "COMPLETED", "CANCELLED", "DISPUTED" })
         @DisplayName("Should Throw BadRequest when Task status is COMPLETED, CANCELLED or DISPUTED")
-        void shouldThrowBadRequestWhenTaskStatusIsCompleted(TaskStatus status) {
+        void shouldThrowBadRequestWhenTaskStatusIsCompletedOrCancelledOrDisputed(TaskStatus status) {
             userEmail = clientUser.getEmail();
             task.setStatus(status);
 

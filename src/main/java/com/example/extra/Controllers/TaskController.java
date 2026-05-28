@@ -4,6 +4,7 @@ import com.example.extra.Entities.Task;
 import com.example.extra.Services.Impl.TaskServiceImpl;
 import com.example.extra.Success.Success;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,10 +14,10 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/v1/tasks")
+@RequiredArgsConstructor
 public class TaskController {
 
-    @Autowired
-    TaskServiceImpl taskServiceImpl;
+    private final TaskServiceImpl taskServiceImpl;
 
     // Returns tasks linked to the currently logged-in user (either as client or provider).
     @GetMapping("/my-jobs")

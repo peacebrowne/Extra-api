@@ -63,7 +63,7 @@ public interface TaskMapper {
             "OR provider_id = #{userId}::UUID ")
     void updateStatusToDisputed(String id, String userId);
 
-    @Update("UPDATE tasks SET status = 'PENDING' " +
+    @Update("UPDATE tasks SET status = 'PENDING', provider_id = NULL " +
             "WHERE id = #{id}::UUID " +
             "AND provider_id = #{userId}::UUID ")
     void updateStatusToPending(String id, String userId);
