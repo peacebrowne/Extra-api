@@ -399,22 +399,22 @@ class TaskServiceImplTest {
     class CancelTaskTest {
         private String taskId;
         private String userEmail;
-        Task canceledTask;
 
         @BeforeEach
         void setUp() {
             taskId = task.getId();
-            userEmail = clientUser.getEmail();
-
-            canceledTask = new Task();
-            canceledTask.setId(taskId);
-            canceledTask.setClientId(clientUser.getId());
-            canceledTask.setStatus(TaskStatus.CANCELLED);
         }
 
         @Test
         @DisplayName("Client should cancel task successfully with valid id when task is still pending")
-        void ClientShouldCancelTaskSuccessfully() {
+        void ClientShouldCancelTaskSuccessfullyWhenTaskIsStillPending() {
+            userEmail = clientUser.getEmail();
+
+            Task canceledTask = new Task();
+            canceledTask.setId(taskId);
+            canceledTask.setClientId(clientUser.getId());
+            canceledTask.setStatus(TaskStatus.CANCELLED);
+
             when(userMapper.getUserByEmail(userEmail)).thenReturn(clientUser);
             when(taskMapper.getTaskById(taskId)).thenReturn(task)
                     .thenReturn(canceledTask);
@@ -428,6 +428,36 @@ class TaskServiceImplTest {
             assertEquals(clientUser.getId(), resultTask.getClientId());
 
             verify(taskMapper, times(1)).updateStatusToCancelled(taskId, clientUser.getId());
+            verify(taskMapper, times(2)).getTaskById(taskId);
+        }
+
+        @Test
+        @DisplayName("Provider should revert task to PENDING when task has been accepted but not started")
+        void ProviderShouldCancelTaskSuccessfullyWhenTaskHasBeenAccepted() {
+            userEmail = providerUser.getEmail();
+            task.setProviderId(providerUser.getId());
+            task.setStatus(TaskStatus.ACCEPTED);
+
+            Task pendingTask = new Task();
+            pendingTask.setId(taskId);
+            pendingTask.setClientId(clientUser.getId());
+            pendingTask.setProviderId(providerUser.getId());
+            pendingTask.setStatus(TaskStatus.PENDING);
+
+            when(userMapper.getUserByEmail(userEmail)).thenReturn(providerUser);
+            when(taskMapper.getTaskById(taskId))
+                    .thenReturn(task)
+                    .thenReturn(pendingTask);
+
+            doNothing().when(taskMapper).updateStatusToPending(taskId, providerUser.getId());
+
+            Task resultTask = taskServiceImpl.cancelTask(taskId, userEmail);
+
+            assertNotNull(resultTask);
+            assertEquals(TaskStatus.PENDING, resultTask.getStatus(), "The returned task status must be PENDING");
+            assertEquals(providerUser.getId(), resultTask.getProviderId());
+
+            verify(taskMapper, times(1)).updateStatusToPending(taskId, providerUser.getId());
             verify(taskMapper, times(2)).getTaskById(taskId);
         }
     }

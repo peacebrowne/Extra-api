@@ -371,9 +371,11 @@ public class TaskServiceImpl implements TaskService {
                 throw new BadRequest("Task is already finalized or disputed and cannot be canceled.");
             }
 
-            // Delegate to role-specific cancellation logic
-            clientInitiateCancel(id, user, existingTask);
-            providerInitiateCancel(id, user, existingTask);
+            switch (user.getRole().name()){
+                case "CLIENT" -> clientInitiateCancel(id, user, existingTask);
+                case "PROVIDER" -> providerInitiateCancel(id, user, existingTask);
+                default -> throw new BadRequest("Invalid user role for cancellation");
+            }
 
             return getTaskById(id);
 
