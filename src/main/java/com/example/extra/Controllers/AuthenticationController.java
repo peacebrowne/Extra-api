@@ -6,18 +6,18 @@ import com.example.extra.Entities.User;
 import com.example.extra.Services.Impl.AuthenticationServiceImpl;
 import com.example.extra.Success.Success;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class AuthenticationController {
 
-    @Autowired
-    AuthenticationServiceImpl authenticationServiceImpl;
+    private final AuthenticationServiceImpl authenticationServiceImpl;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
@@ -33,4 +33,6 @@ public class AuthenticationController {
     public ResponseEntity<?> getUsers() {
         return Success.OK("Successfully Retrieved All Users", true);
     }
+
+
 }

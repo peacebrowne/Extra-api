@@ -1,19 +1,22 @@
 package com.example.extra.Entities;
 
+import com.example.extra.Enumerator.BudgetType;
+import com.example.extra.Enumerator.PropertyType;
 import com.example.extra.Enumerator.TaskStatus;
+import com.example.extra.Enumerator.UrgencyType;
 import jakarta.validation.constraints.*;
 
 import lombok.Data;
-import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 /**
  * Represents a task posting or assignment in the system.
  */
 @Data
-public class Task {
+public class  Task {
 
     /**
      * Unique identifier for the task (for example a UUID or database id).
@@ -31,7 +34,7 @@ public class Task {
     @NotBlank(message = "clientId is required")
     @Pattern(
             regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-            message = "id must be a valid UUID")
+            message = "Client id must be a valid UUID")
     private String clientId;
 
     /**
@@ -66,6 +69,33 @@ public class Task {
     private TaskStatus status = TaskStatus.PENDING;
 
     /**
+     * Defaults to FIXED pricing mode if not specified in the payload
+     * */
+    private BudgetType budgetType = BudgetType.FIXED;
+
+    /**
+     *  Ensures the client provides a financial amount greater than zero
+     *  */
+    @NotNull(message = "Budget amount is required.")
+    @Min(value = 1, message = "Budget amount must be at least 1.")
+    private Double budgetAmount;
+
+    /**
+     * Links the task to its specific sub-category type (e.g., TV Mounting)
+     * */
+    @NotBlank(message = "Sub-category ID is required.")
+    private String subCategoryId;
+
+    private List<String> images;
+
+    @NotNull(message = "Please select when you need this task completed.")
+    private UrgencyType urgencyType = UrgencyType.WITHIN_48_HOURS;
+
+    private PropertyType propertyType = PropertyType.HOUSE;
+
+    private Location location;
+
+    /**
      * Creation timestamp for the task.
      */
     private LocalDateTime createdAt;
@@ -77,4 +107,5 @@ public class Task {
      *  */
     @FutureOrPresent(message = "scheduled date must be now or in the future")
     private LocalDateTime scheduledAt;
+
 }

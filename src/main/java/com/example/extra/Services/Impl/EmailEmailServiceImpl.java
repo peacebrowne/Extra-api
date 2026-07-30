@@ -4,10 +4,10 @@ import com.example.extra.Configuration.Properties.EmailNotificationProperties;
 import com.example.extra.Entities.Email;
 import com.example.extra.Exceptions.Custom.InternalServerError;
 import com.example.extra.Services.EmailService;
-import com.example.extra.Utils.Utils;
+import com.example.extra.Utils.NotificationUtils;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -17,16 +17,15 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-public class EmailServiceImpl implements EmailService {
+@RequiredArgsConstructor
+public class EmailEmailServiceImpl implements EmailService {
 
-    @Autowired
-    JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
-    @Autowired
-    StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
-    @Autowired
-    EmailNotificationProperties emailNotificationProperties;
+    private final EmailNotificationProperties emailNotificationProperties;
+
 
 
     /**
@@ -39,14 +38,15 @@ public class EmailServiceImpl implements EmailService {
      * Delete the email verification code stored in redis
      */
     @Override
-
     public void sendVerificationCode(String email) {
         String sender = emailNotificationProperties.getUsername();
 
         try {
 
             String key = "verification_code_" + email;
-            String code = Utils.generateVerificationCode();
+            String code = NotificationUtils.generateVerificationCode();
+
+            log.info("Verification code sent to {}: {}", email, code);
 
             // Store in Redis: Key = email, Value = code, Timeout = 5 minutes
             stringRedisTemplate.opsForValue().set(key, code, 15, TimeUnit.MINUTES);
@@ -63,11 +63,13 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
 
+
+
         }catch (Exception e){
             stringRedisTemplate.delete("verification_code_" + email);
 
             log.error("Internal Server Error: {}", e.getMessage(), e);
-            throw new InternalServerError("Unexpected error occurred while sending email");
+            throw new InternalServerError("Unexpected error occurred while sending email", e);
         }
     }
 

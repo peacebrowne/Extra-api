@@ -1,12 +1,9 @@
 package com.example.extra.Configuration;
 
-import com.example.extra.Enumerator.Roles;
 import com.example.extra.Filters.JwtFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -33,12 +30,15 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfiguration {
 
-    @Autowired
-    private JwtFilter jwtFilter;
+    private final JwtFilter jwtFilter;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
 
-    @Autowired
-    @Qualifier("UnAuthorized")
-    AuthenticationEntryPoint authenticationEntryPoint;
+
+    public SecurityConfiguration(JwtFilter jwtFilter,  @Qualifier("UnAuthorized") AuthenticationEntryPoint authenticationEntryPoint) {
+        this.jwtFilter = jwtFilter;
+        this.authenticationEntryPoint = authenticationEntryPoint;
+    }
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -50,7 +50,8 @@ public class SecurityConfiguration {
                                 "/api/register",
                                         "/api/login",
                                         "/api/mail/verification-code",
-                                        "/api/sms/verification-code")
+                                        "/api/sms/verification-code",
+                                        "/api/notifications/**")
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated()

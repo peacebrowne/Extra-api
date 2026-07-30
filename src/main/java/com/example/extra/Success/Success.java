@@ -1,5 +1,6 @@
 package com.example.extra.Success;
 
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -10,12 +11,7 @@ public class Success {
 
         HttpStatus status = HttpStatus.CREATED;
 
-        Optional<T> safeData = Optional.ofNullable(data);
-
-        SuccessDetails<T> successDetails = safeData.isEmpty() ? new SuccessDetails<>(message,status.value())
-                : new SuccessDetails<>(message, status.value(), data);
-
-        return new ResponseEntity<>(successDetails, status);
+        return getResponseEntity(message, data, status);
 
     }
 
@@ -23,12 +19,17 @@ public class Success {
 
         HttpStatus status = HttpStatus.OK;
 
+        return getResponseEntity(message, data, status);
+
+    }
+
+    @NonNull
+    private static <T> ResponseEntity<?> getResponseEntity(String message, T data, HttpStatus status) {
         Optional<T> safeData = Optional.ofNullable(data);
 
         SuccessDetails<T> successDetails = safeData.isEmpty() ? new SuccessDetails<>(message,status.value())
                 : new SuccessDetails<>(message, status.value(), data);
 
         return new ResponseEntity<>(successDetails, status);
-
     }
 }

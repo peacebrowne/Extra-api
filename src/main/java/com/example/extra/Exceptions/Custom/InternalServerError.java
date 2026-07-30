@@ -1,7 +1,7 @@
 package com.example.extra.Exceptions.Custom;
 
 public class InternalServerError extends RuntimeException {
-    public InternalServerError(String message)
+    public InternalServerError(String message, Exception e)
     {
         super(message);
     }

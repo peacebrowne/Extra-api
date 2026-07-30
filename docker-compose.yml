@@ -1,13 +1,18 @@
 services:
+
+  # 1. This single container handles ALL database and spatial features
   postgres-db:
     image: postgres:16-alpine
     container_name: postgres-db
+#    image: postgis/postgis:16-3.5-alpine
+#    container_name: postgis-db
+    restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5432:5432" # Changed back to standard 5432 for external tool mapping
     volumes:
       - pg_data:/var/lib/postgresql/data
 
@@ -23,10 +28,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres-db
+      - postgres-db # Connect specifically to the postgis container
       - redis-cache
     environment:
-      # POSTGRES ENV
+      # POSTGRES / POSTGIS ENV (Pointed directly to postgis-db inside the docker network)
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/${DB_NAME}
       - SPRING_DATASOURCE_USERNAME=${DB_USER}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
@@ -44,6 +49,8 @@ services:
       # GOOGLE ENV
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # PHYSICAL DEVICE ENV
+      - DEVICE_API_URL=${DEVICE_API_URL}
     dns:
       - 8.8.8.8
       - 8.8.4.4

@@ -1,7 +1,7 @@
 package com.example.extra.Controllers;
 
 
-import com.example.extra.Services.Impl.SmsServiceImpl;
+import com.example.extra.Services.Impl.SmsEmailServiceImpl;
 import com.example.extra.Success.Success;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SmsController {
 
     @Autowired
-    SmsServiceImpl SmsServiceImpl;
+    SmsEmailServiceImpl SmsServiceImpl;
 
     @PostMapping("/verification-code")
     public ResponseEntity<?> verificationCode(@RequestParam String msisdn) {

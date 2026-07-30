@@ -1,12 +1,16 @@
 package com.example.extra.Controllers;
 
 import com.example.extra.Entities.Task;
+import com.example.extra.Mappers.ImageMapper;
+import com.example.extra.Mappers.TaskMapper;
+import com.example.extra.Mappers.UserMapper;
 import com.example.extra.Services.Impl.TaskServiceImpl;
 import com.example.extra.Success.Success;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +27,8 @@ public class TaskController {
     @GetMapping("/my-jobs")
     @PreAuthorize("hasRole('CLIENT') or hasRole('PROVIDER')")
     public ResponseEntity<?> getMyJobs(Principal principal) {
-        return Success.OK("Successfully Retrieved tasked linked to the currently logged-in user", taskServiceImpl.getAllTasks(principal.getName()));
+        return Success.OK("Successfully Retrieved tasked linked to the currently logged-in user",
+                taskServiceImpl.getAllTasks(principal.getName()));
     }
 
     @GetMapping("/{id}")
@@ -35,15 +40,15 @@ public class TaskController {
     // Creates a new service request (Status: PENDING).
     @PostMapping
     @PreAuthorize("hasRole('CLIENT')")
-    public ResponseEntity<?> createTask(@Valid @RequestBody Task task) {
-        return Success.OK("Successfully created task", taskServiceImpl.createTask(task));
+    public ResponseEntity<?> createTask(@Valid @RequestBody Task task, Principal principal) {
+        return Success.OK("Successfully created task", taskServiceImpl.createTask(task, principal.getName()));
     }
 
     // Creates a new service request (Status: PENDING).
-    @PatchMapping("/update")
+    @PatchMapping("/{id}")
     @PreAuthorize("hasRole('CLIENT')")
-    public ResponseEntity<?> updateTask(@Valid @RequestBody Task task) {
-        return Success.OK("Successfully created task", taskServiceImpl.updateTask(task));
+    public ResponseEntity<?> updateTask(@PathVariable String id, @RequestBody Task task, Principal principal) {
+        return Success.OK("Successfully created task", taskServiceImpl.updateTask(id, task, principal.getName()));
     }
 
     // Assigns the authenticated provider's ID to the task and updates status to ACCEPTED.

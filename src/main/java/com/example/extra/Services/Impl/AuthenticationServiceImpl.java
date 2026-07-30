@@ -30,25 +30,27 @@ import java.util.Optional;
 @Transactional
 @Service
 @Slf4j
+
 public class AuthenticationServiceImpl implements UserDetailsService {
 
-    @Autowired
-    AuthenticationMapper authenticationMapper;
 
-    @Autowired
-    UserMapper userMapper;
+    private final AuthenticationMapper authenticationMapper;
+
+    private final UserMapper userMapper;
 
     @Lazy
     @Autowired
     AuthenticationManager authenticationManager;
 
-    @Autowired
-    private StringRedisTemplate redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
     private final JwtService jwtService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-    public AuthenticationServiceImpl(JwtService jwtService) {
+    public AuthenticationServiceImpl(AuthenticationMapper authenticationMapper, UserMapper userMapper, StringRedisTemplate redisTemplate, JwtService jwtService) {
+        this.authenticationMapper = authenticationMapper;
+        this.userMapper = userMapper;
+        this.redisTemplate = redisTemplate;
         this.jwtService = jwtService;
     }
 
@@ -69,7 +71,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
         } catch (Exception e) {
             log.error("Internal Server Error: {}", e.getMessage(), e);
             throw new InternalServerError(
-                    "An unexpected error occurred while fetching the user.");
+                    "An unexpected error occurred while fetching the user.", e);
         }
     }
 
@@ -83,13 +85,16 @@ public class AuthenticationServiceImpl implements UserDetailsService {
                 )
         );
 
+
         if (authentication.isAuthenticated()) {
 
             User user = userMapper.getUserByEmail(login.getEmail());
 
-            if (user != null) {
-                return jwtService.generateToken(user);
+            if (!user.getRole().equals(login.getRole())) {
+                throw new BadRequest ("Invalid role for the provided email.");
             }
+
+            return jwtService.generateToken(user);
         }
 
         return "Fail";
@@ -118,7 +123,7 @@ public class AuthenticationServiceImpl implements UserDetailsService {
             throw e;
         }catch (Exception e){
             log.error("Internal Server Error: {}", e.getMessage(), e);
-            throw new InternalServerError("An unexpected error occurred while trying to create the user");
+            throw new InternalServerError("An unexpected error occurred while trying to create the user", e);
         }
     }
 

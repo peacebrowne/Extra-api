@@ -9,12 +9,18 @@ public interface UserMapper {
     @Select("SELECT * FROM users WHERE email = #{identifier} OR id = #{identifier}::UUID")
     User getUserByIdentifier(@Param("identifier") String identifier);
 
-    @Select("INSERT INTO users (email, role, password, first_name, last_name) VALUES (#{email}, #{role}, #{password}, #{firstName}, #{lastName}) RETURNING *")
+    @Select("INSERT INTO users (email, role, password, full_name, msisdn, address, latitude, longitude) VALUES (#{email}, #{role}, #{password}, #{fullName}, #{msisdn}, #{address}, #{latitude}, #{longitude}) RETURNING *")
     UserDTO registerUser(User user);
 
     @Select("SELECT * FROM users WHERE email = #{email}")
     User getUserByEmail(@Param("email") String email);
 
-    @Select("SELECT id, email, role FROM users WHERE id = #{clientId}::UUID")
+    @Select("SELECT * FROM users WHERE id = #{clientId}::UUID")
     UserDTO getUserById(@Param("clientId") String clientId);
+
+    @Select("SELECT EXISTS(SELECT 1 FROM users WHERE id = #{id}::UUID)")
+    boolean checkUserExistenceById(@Param("id") String id);
+
+    @Select("SELECT EXISTS(SELECT 1 FROM users WHERE email = #{email})")
+    boolean checkUserExistenceByEmail(@Param("email") String email);
 }
