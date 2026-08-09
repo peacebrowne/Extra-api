@@ -1,16 +1,12 @@
 package com.example.extra.Controllers;
 
 import com.example.extra.Entities.Task;
-import com.example.extra.Mappers.ImageMapper;
-import com.example.extra.Mappers.TaskMapper;
-import com.example.extra.Mappers.UserMapper;
+import com.example.extra.Enumerator.TaskStatus;
 import com.example.extra.Services.Impl.TaskServiceImpl;
 import com.example.extra.Success.Success;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,8 +23,17 @@ public class TaskController {
     @GetMapping("/my-jobs")
     @PreAuthorize("hasRole('CLIENT') or hasRole('PROVIDER')")
     public ResponseEntity<?> getMyJobs(Principal principal) {
-        return Success.OK("Successfully Retrieved tasked linked to the currently logged-in user",
+        return Success.OK("Successfully Retrieved tasks linked to the currently logged-in user",
                 taskServiceImpl.getAllTasks(principal.getName()));
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('PROVIDER')")
+    public ResponseEntity<?> getMyJobsSearch(@RequestParam(value = "term") String term,
+                                             @RequestParam(value = "status", required = false) TaskStatus status,
+                                             Principal principal) {
+        return Success.OK("Successfully Retrieved User Searched tasks linked to the currently logged-in user",
+                taskServiceImpl.searchUserTask(principal.getName(), term, status));
     }
 
     @GetMapping("/{id}")
@@ -80,6 +85,12 @@ public class TaskController {
     @PreAuthorize("hasRole('CLIENT') or hasRole('PROVIDER')")
     public ResponseEntity<?> cancelTask(@PathVariable String id, Principal principal){
         return Success.OK("Successfully cancelled task", taskServiceImpl.cancelTask(id, principal.getName()));
+    }
+
+    @GetMapping("/in-progress")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('PROVIDER')")
+    public ResponseEntity<?>  getInProgressTasks(Principal principal) {
+        return Success.OK("Successfully retrieves user In Progress Tasks", taskServiceImpl.getInProgressTasks(principal.getName()));
     }
 
 }

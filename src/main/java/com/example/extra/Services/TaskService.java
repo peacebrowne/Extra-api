@@ -1,6 +1,7 @@
 package com.example.extra.Services;
 
 import com.example.extra.Entities.Task;
+import com.example.extra.Enumerator.TaskStatus;
 
 import java.util.List;
 
@@ -15,4 +16,6 @@ public interface TaskService {
      Task taskPendingConfirmation(String id, String identifier);
      Task approveTaskCompletion(String id, String identifier);
      Task cancelTask(String id, String identifier);
+     List<Task> getInProgressTasks(String identifier);
+     List<Task> searchUserTask(String identifier, String term, TaskStatus status);
 }

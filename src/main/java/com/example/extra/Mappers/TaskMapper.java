@@ -2,13 +2,14 @@ package com.example.extra.Mappers;
 
 
 import com.example.extra.Entities.Task;
+import com.example.extra.Enumerator.TaskStatus;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
 @Mapper
 public interface TaskMapper {
-    @Select("SELECT * FROM tasks t WHERE id = #{id}::UUID")
+    @Select("SELECT * FROM tasks WHERE id = #{id}::UUID")
     Task getTaskById(@Param("id") String id);
 
     @Select("INSERT INTO tasks " +
@@ -27,11 +28,17 @@ public interface TaskMapper {
             "RETURNING *")
     Task updateTask(Task task);
 
-    @Delete("DELETE FROM task WHERE id = #{id}::UUID")
+    @Delete("DELETE FROM tasks WHERE id = #{id}::UUID")
     void deleteTask(@Param("id") String id);
 
-    @Select("SELECT * FROM tasks WHERE client_id = (SELECT id FROM users WHERE email = #{email})::UUID")
-    List<Task> getAllTasks(@Param("email") String email);
+    @Select("SELECT * FROM tasks WHERE client_id = #{clientId}::UUID ORDER BY created_at DESC")
+    List<Task> getAllTasks(@Param("clientId") String clientId);
+
+    @Select("SELECT * FROM tasks " +
+            "WHERE status = 'IN_PROGRESS' " +
+            "AND (client_id = #{userId}::UUID OR provider_id = #{userId}::UUID) " +
+            "ORDER BY created_at DESC")
+    List<Task> getInProgressTasks(@Param("userId") String userId);
 
     @Select("UPDATE tasks SET status = 'ACCEPTED', provider_id = #{providerId}::UUID " +
             "WHERE id = #{id}::UUID " +
@@ -80,7 +87,9 @@ public interface TaskMapper {
             "RETURNING *")
     Task updateStatusToPending(String id, String userId);
 
-
-
-
+    List<Task> getUserSearchTask(
+            @Param("clientId") String clientId,
+            @Param("term") String term,
+            @Param("status") String status
+    );
 }

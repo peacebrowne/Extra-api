@@ -1,5 +1,6 @@
 package com.example.extra.Entities;
 
+import com.example.extra.DTO.UserDTO;
 import com.example.extra.Enumerator.BudgetType;
 import com.example.extra.Enumerator.PropertyType;
 import com.example.extra.Enumerator.TaskStatus;
@@ -45,6 +46,8 @@ public class  Task {
             regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
             message = "id must be a valid UUID")
     private String providerId;
+
+    private UserDTO provider;
 
     /**
      * Short, human-readable title for the task.
@@ -99,6 +102,8 @@ public class  Task {
      * Creation timestamp for the task.
      */
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
     /**
      *  If provided it must be now or in the future (can't schedule in the past).

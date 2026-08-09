@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.extra.Mappers.TaskMapper">
+
+    <select id="getUserSearchTask" resultType="com.example.extra.Entities.Task">
+        SELECT * FROM tasks
+        <where>
+            client_id = #{clientId}::UUID
+
+            <if test="term != null and term != ''">
+                AND (title ILIKE CONCAT('%', #{term}, '%')
+                OR description ILIKE CONCAT('%', #{term}, '%'))
+            </if>
+
+            <if test="status != null and status != 'All'">
+                AND status = #{status}::text
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+</mapper>

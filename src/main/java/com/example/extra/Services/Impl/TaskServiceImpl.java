@@ -1,5 +1,6 @@
 package com.example.extra.Services.Impl;
 
+import com.example.extra.DTO.UserDTO;
 import com.example.extra.Entities.Location;
 import com.example.extra.Entities.Task;
 import com.example.extra.Entities.User;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,19 +48,17 @@ public class TaskServiceImpl implements TaskService {
     @Cacheable(value = "tasks", key = "#identifier")
     public List<Task> getAllTasks(String identifier) {
         try {
-            List<Task> tasks = taskMapper.getAllTasks(identifier);
+            User user = userServiceImpl.getUserByEmail(identifier);
+            List<Task> tasks = taskMapper.getAllTasks(user.getId());
             tasks.forEach(task -> {
 
-                // Add task location to task
-               Location location = locationServiceImpl.getLocation(task.getId());
-//                log.info("Task location {}", location.getAddress());
-               task.setLocation(location);
+                task.setLocation(addTaskLocation(task.getId()));
 
-               // Add task images to task
-                List<String> images = imageServiceImpl.getImages(task.getId());
-                if (images != null && !images.isEmpty()) {
-                    task.setImages(images);
-                }
+                // Add task provider if existing
+                task.setProvider(addTaskProvider(task.getProviderId()));
+
+                // Add task images to task
+                task.setImages(addTaskImages(task.getId()));
 
             });
             return tasks;
@@ -336,7 +336,8 @@ public class TaskServiceImpl implements TaskService {
                 throw new BadRequest("Task cannot be started unless it is in ACCEPTED status.");
             }
 
-            if (existingTask.getProviderId() == null || !existingTask.getProviderId().equals(user.getId())) {
+            if (existingTask.getProviderId() == null ||
+                    !existingTask.getProviderId().equals(user.getId())) {
                 throw new BadRequest("You are not authorized to start this task.");
             }
 
@@ -480,6 +481,44 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
+    @Override
+    public List<Task> searchUserTask(String identifier, String term, TaskStatus status) {
+        try {
+            User user  = userServiceImpl.getUserByEmail(identifier);
+            String s = status != null ? status.name() : null;
+            List<Task> tasks = taskMapper.getUserSearchTask(user.getId(), term, s);
+            tasks.forEach(task -> {
+
+                // Add task location to task
+                task.setLocation(addTaskLocation(task.getId()));
+
+                // Add task provider if existing
+                task.setProvider(addTaskProvider(task.getProviderId()));
+
+                // Add task images to task
+               task.setImages(addTaskImages(task.getId()));
+
+            });
+            return tasks;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while searching user task {}: {}", identifier, e.getMessage(), e);
+            throw new InternalServerError("Unexpected error occurred while searching user tasks", e);
+        }
+    }
+
+    private Location addTaskLocation(String taskId) {
+        return locationServiceImpl.getLocation(taskId);
+    }
+
+    private UserDTO addTaskProvider(String providerId){
+        return providerId != null ?  userServiceImpl.getUserById(providerId) : null;
+    }
+
+    private List<String> addTaskImages(String taskId){
+        List<String> images = imageServiceImpl.getImages(taskId);
+        return images != null && !images.isEmpty() ? images : new ArrayList<>();
+    }
+
     /**
      * Handles task cancellation when initiated by a client.
      *
@@ -559,6 +598,30 @@ public class TaskServiceImpl implements TaskService {
             }
 
             return task;
+    }
+
+    /**
+     * Retrieves all In Progress task for a specific user
+     *
+     * @param identifier the email address of the user requesting for In Progress Task
+     * @return a list of In Progress tasks for the specified user; returns an empty list if no tasks exist
+     * @throws BadRequest if the user is not the assigned provider (not authorized)
+     * @throws NotFound if the user is not found
+     */
+    @Override
+    @Cacheable(value = "tasks:in_progress", key = "#identifier")
+    public List<Task> getInProgressTasks(String identifier) {
+        try {
+            final User user = userServiceImpl.getUserByEmail(identifier);
+            final String userId = user.getId();
+            return taskMapper.getInProgressTasks(userId);
+        }catch (NotFound | BadRequest e) {
+            log.error("Getting In Progress Tasks Validation Error: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while updating task completion for task {}", e.getMessage(), e);
+            throw new InternalServerError("Unexpected error occurred while updating task completion", e);
+        }
     }
 
 }
